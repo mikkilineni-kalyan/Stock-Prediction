@@ -1,15 +1,26 @@
 import React from 'react';
-import ErrorBoundary from './components/ErrorBoundary';
-import StockPredictor from './components/StockPredictor';
-import { ThemeProvider } from './contexts/ThemeContext';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import StockSearch from './components/StockSearch/StockSearch';
+import StockDashboard from './components/StockDashboard/StockDashboard';
+import './App.css';
 
 function App() {
+  console.log('App component rendering'); // Debug log
+  
   return (
-    <ThemeProvider>
-      <ErrorBoundary>
-        <StockPredictor />
-      </ErrorBoundary>
-    </ThemeProvider>
+    <Router>
+      <div className="App">
+        <header className="App-header">
+          <h1>Stock Predictor</h1>
+        </header>
+        <main>
+          <Routes>
+            <Route path="/" element={<StockSearch />} />
+            <Route path="/dashboard/:symbol" element={<StockDashboard />} />
+          </Routes>
+        </main>
+      </div>
+    </Router>
   );
 }
 

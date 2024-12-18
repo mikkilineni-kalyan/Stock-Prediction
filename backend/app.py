@@ -3,222 +3,434 @@ from flask_cors import CORS
 import pandas as pd
 import yfinance as yf
 from datetime import datetime, timedelta
-import pytz
-import logging
 import numpy as np
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.ensemble import RandomForestRegressor
 import os
+import json
+import logging
+from ml_models.news_predictor import NewsPredictor
+from ml_models.advanced_predictor import AdvancedPredictor
 
-app = Flask(__name__)
-CORS(app)
-
-# Set up logging
-logging.basicConfig(level=logging.INFO)
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,  # Set to DEBUG for more detailed logs
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
-def find_csv_file():
-    # Get the directory containing the current script
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    logger.info(f"Script directory: {script_dir}")
-    
-    # Define possible CSV paths relative to the script directory
-    possible_paths = [
-        os.path.join(script_dir, 'nasdaq-listed.csv'),
-        os.path.join(script_dir, 'api', 'stock_listings.csv')
-    ]
-    
-    # Try each path
-    for path in possible_paths:
-        if os.path.exists(path):
-            logger.info(f"Found CSV at: {path}")
-            return path
-            
-    logger.error("CSV file not found in any of these locations:")
-    for path in possible_paths:
-        logger.error(f"- {path}")
-    return None
+logger.info("Starting application initialization...")
 
-# Load the NASDAQ listings
+app = Flask(__name__)
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["http://localhost:3000"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization", "Accept"],
+        "supports_credentials": True
+    }
+})
+
+# Register blueprints
+from api.stock_routes import stock_bp
+app.register_blueprint(stock_bp, url_prefix='/api/stocks')
+logger.info("Registered stock routes blueprint")
+
+# Initialize predictors
 try:
-    csv_path = find_csv_file()
-    if csv_path is None:
-        raise FileNotFoundError("Could not find CSV file in any location")
-        
-    logger.info(f"Attempting to load CSV from: {csv_path}")
-    STOCK_DATA = pd.read_csv(csv_path)
-    
-    # Clean up any potential whitespace in column names
-    STOCK_DATA.columns = STOCK_DATA.columns.str.strip()
-    
-    logger.info("CSV file loaded successfully")
-    logger.info(f"CSV Columns: {STOCK_DATA.columns.tolist()}")
-    logger.info(f"Number of rows: {len(STOCK_DATA)}")
-    
+    news_predictor = NewsPredictor()
+    advanced_predictor = AdvancedPredictor()
+    logger.info("Successfully initialized predictors")
 except Exception as e:
-    logger.error(f"Error loading stock listings: {str(e)}", exc_info=True)
-    STOCK_DATA = pd.DataFrame()
+    logger.error(f"Error initializing predictors: {str(e)}", exc_info=True)
+    news_predictor = None
+    advanced_predictor = None
 
-@app.route('/api/search-stocks', methods=['GET'])
-def search_stocks():
-    query = request.args.get('q', '').strip()
-    logger.info(f"Received search query: {query}")
-    
+# Get the current directory path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+logger.info(f"Current directory: {current_dir}")
+
+# Load NASDAQ listings
+try:
+    nasdaq_file = os.path.join(current_dir, 'api', 'nasdaq-listed.csv')
+    logger.info(f"Attempting to load NASDAQ data from: {nasdaq_file}")
+    nasdaq_df = pd.read_csv(nasdaq_file)
+    # Convert column names to match frontend expectations
+    nasdaq_df = nasdaq_df.rename(columns={'Symbol': 'Symbol', 'Name': 'Name'})
+    logger.info(f"Successfully loaded NASDAQ data with {len(nasdaq_df)} rows")
+except FileNotFoundError as e:
+    logger.error(f"Error loading NASDAQ stocks: {str(e)}")
+    nasdaq_df = pd.DataFrame(columns=['Symbol', 'Name'])
+    logger.info("Created empty DataFrame as fallback")
+
+# Register blueprints and set predictors
+from api.stock_routes import set_predictors
+set_predictors(news_predictor, advanced_predictor)
+
+@app.before_request
+def log_request_info():
+    logger.debug('Headers: %s', request.headers)
+    logger.debug('Body: %s', request.get_data())
+
+@app.after_request
+def after_request(response):
+    logger.debug('Response: %s', response.get_data())
+    return response
+
+def calculate_technical_indicators(data: pd.DataFrame) -> pd.DataFrame:
+    """Calculate basic technical indicators without ta library."""
     try:
-        if STOCK_DATA.empty:
-            logger.error("STOCK_DATA is empty!")
-            return jsonify([])
+        # Create a copy to avoid modifying original data
+        df = data.copy()
         
-        if not query:
-            # Return first 10 stocks if no query
-            results = STOCK_DATA.head(10)
-        else:
-            # Create a mapping of common company names to their symbols
-            company_aliases = {
-                'GOOGLE': ['GOOGL', 'GOOG'],
-                'ALPHABET': ['GOOGL', 'GOOG'],
-                'META': ['META', 'FB'],
-                'FACEBOOK': ['META', 'FB'],
-                'BERKSHIRE': ['BRK.B', 'BRK-B', 'BRK/B'],
-                'MICROSOFT': ['MSFT'],
-                'APPLE': ['AAPL'],
-                'AMAZON': ['AMZN'],
-                'TESLA': ['TSLA']
-            }
-            
-            query_upper = query.upper()
-            
-            # Check if query matches any company alias
-            matching_symbols = []
-            for company, symbols in company_aliases.items():
-                if query_upper in company or company in query_upper:
-                    matching_symbols.extend(symbols)
-            
-            # Search in Symbol and Name columns, now case-insensitive
-            mask = (
-                STOCK_DATA['Symbol'].astype(str).str.contains(query, case=False, na=False) |
-                STOCK_DATA['Name'].astype(str).str.contains(query, case=False, na=False) |
-                STOCK_DATA['Symbol'].isin(matching_symbols)
-            )
-            results = STOCK_DATA[mask].head(10)
-            logger.info(f"Found {len(results)} matches for query: {query}")
-
-        # Convert to list of dictionaries with more detailed information
-        suggestions = []
-        for _, row in results.iterrows():
-            suggestion = {
-                'symbol': str(row['Symbol']),
-                'name': str(row['Name']),
-                'type': 'NASDAQ Stock',
-                'lastSale': str(row['Last Sale']).replace('$', ''),
-                'netChange': str(row['Net Change']),
-                'percentChange': str(row['% Change']),
-                'marketCap': str(row['Market Cap']),
-                'sector': str(row['Sector']),
-                'industry': str(row['Industry']),
-                'country': str(row['Country']),
-                'volume': str(row['Volume'])
-            }
-            suggestions.append(suggestion)
-            logger.info(f"Added suggestion: {suggestion}")
+        # Initialize all fields with None arrays
+        indicators = ['MA5', 'MA20', 'MA50', 'BB_middle', 'BB_upper', 'BB_lower', 'RSI', 'Volume_SMA', 'Volume_ratio']
+        for indicator in indicators:
+            df[indicator] = [None] * len(df)
         
-        return jsonify(suggestions)
+        # Moving Averages
+        if len(df) >= 5:
+            df['MA5'] = df['Close'].rolling(window=5).mean()
+        if len(df) >= 20:
+            df['MA20'] = df['Close'].rolling(window=20).mean()
+        if len(df) >= 50:
+            df['MA50'] = df['Close'].rolling(window=50).mean()
+        
+        # Bollinger Bands (requires 20 periods)
+        if len(df) >= 20:
+            df['BB_middle'] = df['Close'].rolling(window=20).mean()
+            std = df['Close'].rolling(window=20).std()
+            df['BB_upper'] = df['BB_middle'] + 2 * std
+            df['BB_lower'] = df['BB_middle'] - 2 * std
+        
+        # RSI (requires 14 periods)
+        if len(df) >= 14:
+            delta = df['Close'].diff()
+            gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+            rs = gain / loss
+            df['RSI'] = 100 - (100 / (1 + rs))
+        
+        # Volume indicators (requires 20 periods)
+        if len(df) >= 20:
+            df['Volume_SMA'] = df['Volume'].rolling(window=20).mean()
+            df['Volume_ratio'] = df['Volume'] / df['Volume_SMA']
+        
+        return df
     except Exception as e:
-        logger.error(f"Search error: {str(e)}", exc_info=True)
-        return jsonify([])
+        logger.error(f"Error calculating technical indicators: {str(e)}")
+        # Return the DataFrame with initialized indicators even if calculation fails
+        return df
 
-@app.route('/api/predict/<symbol>', methods=['POST'])
-def predict_stock(symbol):
+def prepare_prediction_data(data: pd.DataFrame) -> tuple:
+    """Prepare data for prediction model."""
     try:
-        data = request.get_json()
-        if not data:
-            logger.error("No data provided in prediction request")
-            return jsonify({'error': 'No data provided'}), 400
-
-        days = int(data.get('days', 7))
-        start_datetime_str = data.get('startDateTime')
+        # Create features
+        df = data.copy()
         
-        if not start_datetime_str:
-            logger.error("Start date/time is missing in prediction request")
-            return jsonify({'error': 'Start date/time is required'}), 400
+        # Price-based features
+        df['Returns'] = df['Close'].pct_change()
+        df['Returns_vol'] = df['Returns'].rolling(window=5).std()
+        df['Price_vol'] = df['Close'].rolling(window=5).std()
+        
+        # Technical indicator features
+        for col in ['RSI']:
+            if col in df.columns:
+                df[f'{col}_diff'] = df[col].diff()
+                df[f'{col}_lag1'] = df[col].shift(1)
+                df[f'{col}_lag2'] = df[col].shift(2)
+        
+        # Create target (next day's return)
+        df['Target'] = df['Returns'].shift(-1)
+        
+        # Drop rows with NaN values
+        df = df.dropna()
+        
+        # Select features for prediction
+        feature_columns = [col for col in df.columns if col not in ['Target', 'Date', 'Returns']]
+        X = df[feature_columns].values
+        y = df['Target'].values
+        
+        return X, y, df
+    except Exception as e:
+        logger.error(f"Error preparing prediction data: {str(e)}")
+        return None, None, None
 
-        logger.info(f"Predicting {symbol} for {days} days from {start_datetime_str}")
+def predict_next_day(data: pd.DataFrame) -> dict:
+    """Enhanced prediction model using Random Forest."""
+    try:
+        # Prepare data
+        X, y, df = prepare_prediction_data(data)
+        if X is None or y is None:
+            raise ValueError("Failed to prepare prediction data")
+        
+        # Train model on recent data (last 252 trading days if available)
+        train_size = min(len(X), 252)
+        X_train = X[-train_size:-1]
+        y_train = y[-train_size:-1]
+        
+        # Initialize and train model
+        model = RandomForestRegressor(n_estimators=100, random_state=42)
+        model.fit(X_train, y_train)
+        
+        # Predict next day's return
+        next_day_features = X[-1:]
+        predicted_return = model.predict(next_day_features)[0]
+        
+        # Calculate prediction
+        last_price = float(data['Close'].iloc[-1])
+        next_day_price = last_price * (1 + predicted_return)
+        
+        # Calculate confidence based on feature importance
+        confidence = min(0.8, 0.5 + model.score(X_train, y_train))
+        
+        # Determine trend
+        trend = 'neutral'
+        if predicted_return > 0.01:
+            trend = 'bullish'
+        elif predicted_return < -0.01:
+            trend = 'bearish'
+        
+        return {
+            'next_day': round(float(next_day_price), 2),
+            'confidence': round(float(confidence), 2),
+            'trend': trend,
+            'predicted_return': round(float(predicted_return * 100), 2)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in prediction: {str(e)}")
+        return {
+            'next_day': float(data['Close'].iloc[-1]),
+            'confidence': 0.5,
+            'trend': 'neutral',
+            'predicted_return': 0.0
+        }
 
-        # Parse start datetime
+def prepare_stock_data(ticker: str, period: str = '1y') -> dict:
+    """Fetch and prepare stock data for analysis and prediction."""
+    try:
+        logger.info(f"Fetching data for {ticker} with period {period}")
+        
+        # Initialize stock
+        stock = yf.Ticker(ticker)
+        
+        # First attempt with primary intervals
+        if period == '1d':
+            hist = stock.history(period='1d', interval='5m')
+            if len(hist) < 5:  # If not enough data, try 2m interval
+                hist = stock.history(period='1d', interval='2m')
+            if len(hist) < 5:  # If still not enough, try 1m as last resort
+                hist = stock.history(period='1d', interval='1m')
+        elif period == '5d':
+            hist = stock.history(period='5d', interval='15m')
+            if len(hist) < 5:  # If not enough data, try 5m interval
+                hist = stock.history(period='5d', interval='5m')
+        else:
+            # For other periods, use standard intervals
+            period_intervals = {
+                '1mo': ('1mo', '1h'),
+                '3mo': ('3mo', '1h'),
+                '6mo': ('6mo', '1d'),
+                '1y': ('1y', '1d'),
+                '2y': ('2y', '1d'),
+                '5y': ('5y', '1d'),
+                'max': ('max', '1d')
+            }
+            p, interval = period_intervals.get(period, ('1y', '1d'))
+            hist = stock.history(period=p, interval=interval)
+        
+        if hist.empty:
+            logger.error(f"No data found for {ticker} with period {period}")
+            # Fallback to daily data for very short periods
+            if period in ['1d', '5d']:
+                fallback_days = 5 if period == '5d' else 2
+                hist = stock.history(period=f'{fallback_days}d', interval='1d')
+                if hist.empty:
+                    raise ValueError(f"No data found for ticker {ticker} for period {period}")
+            else:
+                raise ValueError(f"No data found for ticker {ticker} for period {period}")
+            
+        logger.info(f"Fetched {len(hist)} data points")
+        
         try:
-            start_datetime = datetime.fromisoformat(start_datetime_str.replace('Z', '+00:00'))
-            est = pytz.timezone('US/Eastern')
-            start_datetime = start_datetime.astimezone(est)
-        except ValueError as e:
-            logger.error(f"Invalid date/time format: {e}")
-            return jsonify({'error': 'Invalid date/time format'}), 400
-
-        # Fetch historical data
-        try:
-            ticker = yf.Ticker(symbol)
-            hist = ticker.history(period='1y')
+            # Calculate technical indicators
+            data = calculate_technical_indicators(hist)
+            logger.info("Successfully calculated technical indicators")
+        except Exception as e:
+            logger.error(f"Error calculating indicators: {str(e)}")
+            # If technical indicators fail, use raw historical data
+            data = hist.copy()
+            # Initialize indicator fields with None arrays
+            indicators = ['MA5', 'MA20', 'MA50', 'BB_middle', 'BB_upper', 'BB_lower', 'RSI', 'Volume_SMA', 'Volume_ratio']
+            for indicator in indicators:
+                data[indicator] = [None] * len(data)
+        
+        # Prepare prediction
+        prediction = {
+            'next_day': float(hist['Close'].iloc[-1]),
+            'confidence': 0.5,
+            'trend': 'neutral',
+            'predicted_return': 0.0
+        }
+        
+        # Convert NaN values to None for JSON serialization
+        def safe_convert(x):
+            return None if pd.isna(x) else float(x)
+        
+        # Format datetime index based on period
+        if period in ['1d', '5d']:
+            date_format = '%Y-%m-%d %H:%M'
+        else:
+            date_format = '%Y-%m-%d'
             
-            if hist.empty:
-                logger.error(f"No data available for symbol {symbol}")
-                return jsonify({'error': f'No data available for symbol {symbol}'}), 404
-
-            # Calculate predictions
-            current_price = float(hist['Close'].iloc[-1])
-            logger.info(f"Current price for {symbol}: {current_price}")
-            
-            # Calculate daily returns and volatility
-            returns = hist['Close'].pct_change().dropna()
-            daily_volatility = returns.std()
-            annual_volatility = daily_volatility * (252 ** 0.5)  # Annualized volatility
-            
-            # Generate predictions using historical volatility
-            predictions = [current_price]
-            dates = [start_datetime.strftime('%Y-%m-%d')]
-            
-            for i in range(days):
-                last_price = predictions[-1]
-                # Use historical mean return and add volatility
-                avg_return = returns.mean()
-                next_return = np.random.normal(avg_return, daily_volatility)
-                next_price = last_price * (1 + next_return)
-                predictions.append(float(next_price))
-                
-                next_date = start_datetime + timedelta(days=i+1)
-                dates.append(next_date.strftime('%Y-%m-%d'))
-
-            # Calculate confidence intervals
-            confidence_interval = 1.96 * daily_volatility  # 95% confidence interval
-            upper_bound = [price * (1 + confidence_interval) for price in predictions]
-            lower_bound = [price * (1 - confidence_interval) for price in predictions]
-
-            response_data = {
-                'symbol': symbol,
-                'currentPrice': current_price,
-                'predictions': predictions,
-                'dates': dates,
-                'confidenceIntervals': {
-                    'upper': upper_bound,
-                    'lower': lower_bound
+        # Prepare response data
+        response_data = {
+            'dates': data.index.strftime(date_format).tolist(),
+            'prices': [safe_convert(x) for x in data['Close']],
+            'volumes': [int(x) for x in data['Volume']],
+            'prediction': prediction,
+            'indicators': {
+                'ma5': [safe_convert(x) for x in data['MA5']],
+                'ma20': [safe_convert(x) for x in data['MA20']],
+                'ma50': [safe_convert(x) for x in data['MA50']],
+                'rsi': [safe_convert(x) for x in data['RSI']],
+                'bollinger': {
+                    'upper': [safe_convert(x) for x in data['BB_upper']],
+                    'middle': [safe_convert(x) for x in data['BB_middle']],
+                    'lower': [safe_convert(x) for x in data['BB_lower']]
                 },
-                'metrics': {
-                    'volatility': float(annual_volatility * 100),  # Convert to percentage
-                    'predictedChange': float((predictions[-1]/current_price - 1) * 100),
-                    'averageVolume': float(hist['Volume'].mean())
+                'volume': {
+                    'raw': [int(x) for x in data['Volume']],
+                    'sma': [safe_convert(x) for x in data['Volume_SMA']],
+                    'ratio': [safe_convert(x) for x in data['Volume_ratio']]
                 }
             }
-
-            logger.info(f"Prediction successful for {symbol}")
-            return jsonify(response_data)
-
-        except Exception as e:
-            logger.error(f"Error fetching data for {symbol}: {str(e)}")
-            return jsonify({'error': f'Error fetching data: {str(e)}'}), 500
-
+        }
+        
+        return response_data
+        
     except Exception as e:
-        logger.error(f"Error predicting {symbol}: {str(e)}", exc_info=True)
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error preparing stock data: {str(e)}")
+        raise Exception(f"Error preparing stock data: {str(e)}")
 
-@app.route('/api/health', methods=['GET'])
+@app.route('/')
+def home():
+    return jsonify({"status": "ok", "message": "Stock Prediction API"})
+
+@app.route('/api/health')
 def health_check():
-    return jsonify({'status': 'healthy'})
+    return jsonify({"status": "healthy"})
+
+@app.route('/api/search/stocks')
+def search_stocks():
+    logger.info("Handling request to /api/search/stocks")
+    query = request.args.get('q', '').strip()
+    logger.info(f"Search query: {query}")
+    
+    if not query:
+        logger.info("Empty query, returning empty list")
+        return jsonify([])
+    
+    try:
+        # Convert query to uppercase for case-insensitive search
+        query_upper = query.upper()
+        
+        # First try exact symbol match
+        exact_matches = nasdaq_df[nasdaq_df['Symbol'] == query_upper]
+        
+        if not exact_matches.empty:
+            results = exact_matches[['Symbol', 'Name']].to_dict('records')
+            logger.info(f"Found exact match for query: {query}")
+            return jsonify(results)
+        
+        # Then try partial matches
+        symbol_matches = nasdaq_df[nasdaq_df['Symbol'].str.contains(query_upper, case=False, na=False)]
+        name_matches = nasdaq_df[nasdaq_df['Name'].str.contains(query, case=False, na=False)]
+        
+        # Combine matches and remove duplicates
+        matches = pd.concat([symbol_matches, name_matches]).drop_duplicates(subset=['Symbol'])
+        
+        # Sort by symbol length and then alphabetically
+        matches['SymLen'] = matches['Symbol'].str.len()
+        matches = matches.sort_values(['SymLen', 'Symbol']).head(10)
+        
+        # Convert to list of dictionaries
+        results = matches[['Symbol', 'Name']].to_dict('records')
+        logger.info(f"Found {len(results)} matches for query: {query}")
+        
+        if not results:
+            logger.info("No matches found, returning empty list")
+            return jsonify([])
+            
+        return jsonify(results)
+        
+    except Exception as e:
+        logger.error(f"Error in search_stocks: {str(e)}")
+        return jsonify({"error": "Failed to search stocks"}), 500
+
+@app.route('/api/stocks/news/<ticker>')
+def get_stock_news(ticker):
+    """Get news analysis and predictions for a stock"""
+    try:
+        # Get impact prediction
+        impact = news_predictor.predict_impact(ticker)
+        
+        # Get historical correlation
+        correlation = news_predictor.analyze_historical_correlation(ticker)
+        
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'impact_prediction': impact,
+                'historical_correlation': correlation
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        }), 500
+
+@app.route('/api/stocks/data/<ticker>')
+def get_stock_data(ticker):
+    """Get stock data and predictions."""
+    try:
+        period = request.args.get('period', '1y')
+        
+        # Get technical analysis data
+        data = prepare_stock_data(ticker, period)
+        
+        # Get news impact prediction
+        impact = news_predictor.predict_impact(ticker)
+        
+        # Combine technical and news analysis for final prediction
+        confidence = (data['prediction']['confidence'] + impact['confidence']) / 2
+        
+        # Adjust prediction based on news sentiment
+        if impact['score'] >= 3:
+            if impact['impact'] == 'positive':
+                predicted_return = data['prediction']['predicted_return'] * (1 + impact['score']/10)
+            else:
+                predicted_return = data['prediction']['predicted_return'] * (1 - impact['score']/10)
+        else:
+            predicted_return = data['prediction']['predicted_return']
+        
+        # Update prediction with news analysis
+        data['prediction']['confidence'] = confidence
+        data['prediction']['predicted_return'] = predicted_return
+        data['prediction']['news_impact'] = impact
+        
+        return jsonify({
+            'status': 'success',
+            'data': data
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        }), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    logger.info("Starting Flask server on port 5000...")
+    app.run(debug=True, port=5000, threaded=True)

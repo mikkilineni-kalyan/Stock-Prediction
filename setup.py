@@ -1,0 +1,30 @@
+from setuptools import setup, find_packages
+
+setup(
+    name="stock_prediction",
+    version="0.1",
+    packages=find_packages(),
+    install_requires=[
+        'flask',
+        'flask-cors',
+        'python-dotenv',
+        'yfinance',
+        'pandas',
+        'numpy',
+        'requests',
+        'newsapi-python',
+        'finnhub-python',
+        'tweepy',
+        'praw',
+        'sec-api',
+        'textblob',
+        'nltk',
+        'pandas_market_calendars',
+        'psutil',
+        'beautifulsoup4',
+        'scikit-learn',
+        'tensorflow',
+        'xgboost',
+        'apscheduler'
+    ],
+)

@@ -1,0 +1,125 @@
+.stock-dashboard {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.dashboard-header {
+    margin-bottom: 30px;
+}
+
+.dashboard-header h1 {
+    margin: 0;
+    font-size: 2em;
+    color: #333;
+}
+
+.price-info {
+    margin-top: 10px;
+}
+
+.current-price {
+    font-size: 2.5em;
+    font-weight: bold;
+    color: #333;
+}
+
+.price-change {
+    font-size: 1.2em;
+    margin-top: 5px;
+}
+
+.price-change.positive {
+    color: #28a745;
+}
+
+.price-change.negative {
+    color: #dc3545;
+}
+
+.sentiment-section {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
+
+.sentiment-section h2 {
+    margin-top: 0;
+    color: #333;
+}
+
+.sentiment-info {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.sentiment-score {
+    font-size: 1.5em;
+    font-weight: bold;
+    padding: 10px 20px;
+    border-radius: 4px;
+    background-color: white;
+}
+
+.prediction {
+    font-size: 1.2em;
+}
+
+.prediction-positive {
+    color: #28a745;
+}
+
+.prediction-neutral {
+    color: #ffc107;
+}
+
+.prediction-negative {
+    color: #dc3545;
+}
+
+.historical-section {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.historical-section h2 {
+    margin-top: 0;
+    color: #333;
+}
+
+.chart {
+    min-height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+}
+
+.dashboard-footer {
+    margin-top: 30px;
+    text-align: right;
+    color: #666;
+    font-size: 0.9em;
+}
+
+.loading {
+    text-align: center;
+    padding: 50px;
+    font-size: 1.2em;
+    color: #666;
+}
+
+.error {
+    text-align: center;
+    padding: 20px;
+    margin: 50px auto;
+    max-width: 600px;
+    color: #dc3545;
+    background-color: #f8d7da;
+    border: 1px solid #dc3545;
+    border-radius: 4px;
+}

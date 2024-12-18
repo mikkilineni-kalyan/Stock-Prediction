@@ -1,0 +1,99 @@
+.sentiment-analysis {
+    padding: 20px;
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.sentiment-summary {
+    margin-bottom: 24px;
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
+.sentiment-score {
+    font-size: 24px;
+    font-weight: bold;
+    margin: 12px 0;
+    padding: 8px 16px;
+    border-radius: 4px;
+}
+
+.sentiment-score.positive {
+    color: #28a745;
+    background: rgba(40, 167, 69, 0.1);
+}
+
+.sentiment-score.negative {
+    color: #dc3545;
+    background: rgba(220, 53, 69, 0.1);
+}
+
+.sentiment-score.neutral {
+    color: #6c757d;
+    background: rgba(108, 117, 125, 0.1);
+}
+
+.confidence {
+    font-size: 16px;
+    color: #495057;
+    margin: 8px 0;
+}
+
+.historical-accuracy {
+    font-size: 16px;
+    color: #495057;
+    margin: 8px 0;
+}
+
+.source-breakdown {
+    margin: 24px 0;
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
+.historical-stats {
+    margin: 24px 0;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.stat-item {
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    text-align: center;
+}
+
+.stat-item label {
+    display: block;
+    font-size: 14px;
+    color: #6c757d;
+    margin-bottom: 8px;
+}
+
+.stat-item value {
+    display: block;
+    font-size: 20px;
+    font-weight: bold;
+    color: #212529;
+}
+
+.stat-item value.improving {
+    color: #28a745;
+}
+
+.stat-item value.declining {
+    color: #dc3545;
+}
+
+.stat-item value.neutral {
+    color: #6c757d;
+} 
