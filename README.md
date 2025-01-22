@@ -1,8 +1,8 @@
-# Stock Prediction Platform 📈
+# Stock Prediction Platform 
 
 A modern web application that combines news sentiment analysis with machine learning to predict stock market movements. Built with React/TypeScript frontend and Python/Flask backend.
 
-## 🚀 Features
+## Features
 
 - **Real-time Stock Search**: Quick search functionality with autocomplete for stock symbols
 - **Sentiment Analysis**: Advanced sentiment scoring based on market news
@@ -10,7 +10,7 @@ A modern web application that combines news sentiment analysis with machine lear
 - **Price Analytics**: Real-time price updates and historical data visualization
 - **Prediction Engine**: Machine learning-based market movement predictions
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Frontend
 - React.js
@@ -26,7 +26,7 @@ A modern web application that combines news sentiment analysis with machine lear
 - yfinance for market data
 - Logging system for debugging
 
-## 🏗️ Project Structure
+## Project Structure
 
 ```
 Stock-Prediction/
@@ -42,7 +42,7 @@ Stock-Prediction/
     └── test_server.py     # API endpoints and business logic
 ```
 
-## 🚦 Getting Started
+## Getting Started
 
 ### Prerequisites
 - Node.js (v14 or higher)
@@ -85,7 +85,7 @@ npm start
 
 The application will be available at `http://localhost:3000`
 
-## 🌟 Key Features in Detail
+## Key Features in Detail
 
 ### Stock Search
 - Real-time stock symbol search
@@ -100,12 +100,12 @@ The application will be available at `http://localhost:3000`
 - Prediction indicators
 - Interactive charts (coming soon)
 
-## 🔄 API Endpoints
+## API Endpoints
 
 - `GET /api/stocks/search?q={query}`: Search for stocks
 - `GET /api/stocks/data/{symbol}`: Get detailed stock information
 
-## 🚧 Current Development Status
+## Current Development Status
 
 The project is actively under development with the following features planned:
 
@@ -162,15 +162,15 @@ cp .env.example .env
 - `REDIS_PORT`: Redis port
 - `REDIS_DB`: Redis database number
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-## 📝 License
+## License
 
 This project is licensed under the MIT License - see the LICENSE file for details
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - yfinance for providing market data
 - React community for excellent documentation
@@ -178,3 +178,81 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 ⚠️ Note: This project is in active development. Features and documentation may change frequently.
+
+## Setup Instructions
+
+### Prerequisites
+- Python 3.8 or higher
+- Node.js 14 or higher
+- npm or yarn
+
+### Backend Setup
+1. Create a virtual environment:
+   ```bash
+   cd backend
+   python -m venv venv
+   ```
+
+2. Activate the virtual environment:
+   - Windows:
+     ```bash
+     .\venv\Scripts\activate
+     ```
+   - Unix/MacOS:
+     ```bash
+     source venv/bin/activate
+     ```
+
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. Set up environment variables:
+   - Copy `.env.example` to `.env`
+   - Update the variables in `.env` with your settings
+
+5. Start the Flask server:
+   ```bash
+   python test_server.py
+   ```
+   The backend will run on http://localhost:5000
+
+### Frontend Setup
+1. Install dependencies:
+   ```bash
+   cd frontend
+   npm install
+   ```
+
+2. Start the development server:
+   ```bash
+   npm start
+   ```
+   The frontend will run on http://localhost:3000
+
+## Usage
+
+1. Open http://localhost:3000 in your browser
+2. Use the search bar to find stocks
+3. View real-time prices, historical data, and predictions
+4. Toggle between light and dark themes using the theme switch
+
+## API Endpoints
+
+- `/api/stocks/search` - Search for stocks
+- `/api/stocks/data/<symbol>` - Get stock data and predictions
+- `/api/stocks/news/<symbol>` - Get stock-related news
+- `/api/stocks/analysis/<symbol>` - Get technical analysis
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
