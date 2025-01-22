@@ -1,0 +1,40 @@
+.prediction-summary {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.prediction-direction {
+    font-size: 1.5em;
+    font-weight: bold;
+    padding: 8px 16px;
+    border-radius: 4px;
+}
+
+.prediction-direction.bullish {
+    background: #e8f5e9;
+    color: #4CAF50;
+}
+
+.prediction-direction.bearish {
+    background: #ffebee;
+    color: #f44336;
+}
+
+.prediction-details {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.confidence {
+    font-weight: bold;
+}
+
+.strength {
+    color: #666;
+} 

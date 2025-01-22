@@ -1,0 +1,179 @@
+.App {
+  width: 100%;
+  min-height: 100vh;
+  padding: 20px;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  max-width: 1200px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.App-header {
+  margin-bottom: 30px;
+  text-align: center;
+  background-color: #282c34;
+  padding: 20px;
+  color: white;
+}
+
+.App-header h1 {
+  margin: 0;
+  font-size: 2em;
+}
+
+.error-banner {
+  background-color: #ffebee;
+  color: #c62828;
+  padding: 10px;
+  border-radius: 4px;
+  margin: 10px 0;
+}
+
+.loading-spinner {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+}
+
+.prediction-results {
+  margin-top: 20px;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-content {
+  flex: 1;
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+main {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  font-size: 1.2rem;
+  color: #666;
+}
+
+.error {
+  color: #d32f2f;
+  padding: 20px;
+  border-radius: 4px;
+  background-color: #ffebee;
+  margin: 20px 0;
+}
+
+.stock-search {
+  max-width: 600px;
+  margin: 40px auto;
+  padding: 20px;
+  text-align: center;
+}
+
+.stock-search input {
+  width: 100%;
+  padding: 10px;
+  margin: 10px 0;
+  font-size: 16px;
+}
+
+.stock-search button {
+  padding: 10px 20px;
+  font-size: 16px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.app {
+  text-align: center;
+  padding: 20px;
+}
+
+h1 {
+  color: #333;
+  margin-bottom: 30px;
+}
+
+.search-container {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+input {
+  padding: 10px;
+  font-size: 16px;
+  width: 200px;
+  margin-right: 10px;
+}
+
+button {
+  padding: 10px 20px;
+  font-size: 16px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #0056b3;
+}
+
+/* Dark mode styles */
+.dark {
+  background-color: #1a1a1a;
+  color: #ffffff;
+}
+
+.dark .App-header {
+  background-color: #000000;
+}
+
+.dark .stock-info {
+  background: #2d2d2d;
+}
+
+.dark .price-info,
+.dark .prediction-info,
+.dark .chart-container {
+  background: #333333;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Light mode styles */
+.light {
+  background-color: #ffffff;
+  color: #000000;
+}
+
+.light .App-header {
+  background-color: #282c34;
+}
+
+.light .stock-info {
+  background: #f5f5f5;
+}
+
+.light .price-info,
+.light .prediction-info,
+.light .chart-container {
+  background: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}

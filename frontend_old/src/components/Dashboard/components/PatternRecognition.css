@@ -1,0 +1,48 @@
+.pattern-recognition {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.pattern-item {
+    padding: 10px;
+    border-radius: 4px;
+    background: #f8f9fa;
+    border-left: 4px solid #ddd;
+}
+
+.pattern-item.detected {
+    border-left-color: #4CAF50;
+    background: #e8f5e9;
+}
+
+.pattern-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.pattern-name {
+    font-weight: bold;
+}
+
+.pattern-status {
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.9em;
+}
+
+.pattern-status.detected {
+    color: #4CAF50;
+}
+
+.pattern-status.not-detected {
+    color: #9e9e9e;
+}
+
+.pattern-description {
+    font-size: 0.9em;
+    color: #666;
+    margin: 5px 0 0 0;
+} 
